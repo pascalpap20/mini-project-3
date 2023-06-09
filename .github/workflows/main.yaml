@@ -1,0 +1,61 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+
+      - name: Build
+        run: |
+          go build -o crud ./main.go
+
+      - name: Build Docker image
+        run: docker build -t pascalpap20/crm-service-image .
+
+      - name: Log in to Docker registry
+        uses: docker/login-action@v1
+        with:
+          registry: docker.io
+          username: ${{ vars.DOCKER_USERNAME }}
+          password: ${{ vars.DOCKER_PASSWORD }}
+
+      - name: Push Docker image
+        run: docker push pascalpap20/crm-service-image:latest
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Generate mock
+        uses: |
+          mockery --dir=repository --output=mock --outpkg=mocks --all
+
+      - name: Test
+        run: |
+          go test -v crud/modules/account crud/modules/account
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Deploy
+        run: |
+          docker-compose up -d
