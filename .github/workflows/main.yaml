@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Generate mock
-        uses: |
+        run: |
           mockery --dir=repository --output=mock --outpkg=mocks --all
 
       - name: Test
